@@ -1,0 +1,93 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+venv/
+.env
+.python-version
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Pytest
+.pytest_cache/
+
+# Django stuff:
+*.log
+
+# SQLite database
+*.sqlite3
+*.db
+*.sqlite
+
+# VSCode files
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+
+# Node modules (if frontend uses npm/yarn)
+frontend/node_modules/
+node_modules/
+
+# Frontend build artifacts
+frontend/build/
+frontend/dist/
+frontend/.next/
+frontend/out/
+frontend/.cache/
+*.lock
+
+# Nginx logs (if you ever mount)
+nginx/logs/
+
+# noVNC/websockify artifacts
+/opt/noVNC/
+!computer-use-demo/  # Only ignore root /opt/noVNC if it ever gets here accidentally
+
+# Python pip cache
+pip-wheel-metadata/
+pip-log.txt
+
+# Misc
+*.swp
+*.bak
+*.tmp
+*.old
+
+# Mac files
+.AppleDouble
+.LSOverride

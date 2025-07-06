@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Legent AI</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@novnc/novnc/core/rfb.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar: Session/Task History -->
+    <aside class="sidebar">
+      <div class="task-history" id="taskHistory"></div>
+      <button class="new-task" onclick="startNewTask()">+ New Agent Task</button>
+    </aside>
+
+    <!-- Main: VNC Canvas + Record/Stop -->
+    <main class="main-panel">
+      <div class="main-header">
+        <span></span>
+        <!-- <div>
+          <button onclick="startRecording()">🎤 Record</button>
+          <button onclick="stopTask()">⏹️ Stop</button>
+        </div> -->
+      </div>
+      <div class="vnc-container" id="vncContainer">
+        <iframe
+      src="http://localhost:6080/vnc.html?view_only=1&autoconnect=1&resize=scale"
+      width="100%"
+      height="800"
+      style="border: none"
+      title="noVNC"
+    ></iframe>
+      </div>
+    </main>
+
+    <!-- Right Panel: Chat/Progress, Message Input, File Upload -->
+    <section class="right-panel">
+      <div class="chat-history" id="chatHistory">
+        <div class="bot-msg">Hi! Let me know what task to accomplish</div>
+      </div>
+      <div class="msg-input-row">
+        <input type="text" id="msgInput" placeholder="Write a message"/>
+        <button onclick="sendMessage()">➤</button>
+      </div>
+      <!-- <div class="file-upload">
+        <label for="fileInput" class="upload-box">
+          <span>📤 Drag and drop a file or click</span>
+        </label>
+        <input type="file" id="fileInput" style="display:none" onchange="uploadFile()"/>
+      </div> -->
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

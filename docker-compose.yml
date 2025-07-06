@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  computeruse-vm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: computeruse-vm
+    ports:
+      - "8080:8080"  # nginx (single entrypoint: frontend, API, noVNC, etc.)
+      - "6080:6080"  # noVNC browser (if you want direct access for debug)
+      - "5900:5900"  # VNC native client (if you want direct access for debug)
+    environment:
+      - DISPLAY_NUM=1
+      - DISPLAY=:1
+      - HEIGHT=768
+      - WIDTH=1024

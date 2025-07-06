@@ -1,0 +1,129 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #f7faff;
+  }
+  .container {
+    display: flex;
+    height: 100vh;
+  }
+  .sidebar {
+    width: 240px;
+    background: #e6effa;
+    padding: 20px 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+  .search {
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid #ccd;
+  }
+  .task-history {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 120px;
+  }
+  .new-task {
+    background: #469afc;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .main-panel {
+    flex: 1.5;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    background: #f7fbff;
+    padding: 16px 0;
+    position: relative;
+  }
+  .main-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px 8px 20px;
+    align-items: center;
+  }
+  .vnc-container {
+    flex: 1;
+    background: #263248;
+    border-radius: 12px;
+    margin: 0 20px;
+    overflow: hidden;
+    min-height: 430px;
+    box-shadow: 0 2px 10px #0001;
+  }
+  .right-panel {
+    width: 320px;
+    background: #f8fbfd;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 10px;
+    box-sizing: border-box;
+  }
+  .chat-history {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px;
+    min-height: 120px;
+  }
+  .bot-msg {
+    color: #347adc;
+    margin-bottom: 8px;
+  }
+  .msg-input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .msg-input-row input {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccd;
+  }
+  .msg-input-row button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: #469afc;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .file-upload {
+    margin-top: 20px;
+  }
+  .upload-box {
+    display: block;
+    padding: 20px;
+    border: 2px dashed #b2d1fa;
+    text-align: center;
+    color: #4097d1;
+    background: #f2f8ff;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background 0.2s;
+  }
+  .upload-box:hover {
+    background: #e6f0fd;
+  }
+  .selected-session {
+    background: #D7E9FF;
+    font-weight: bold;
+    border-radius: 8px;
+}  
