@@ -71,3 +71,11 @@
 - The backend and agent will not function without the API key in your `.env` file.
 
 ---
+
+## 📺 Demo Video
+
+Watch a full walkthrough of the Computer Use Agent challenge, demonstrating end-to-end setup, agent actions, and the integrated web interface:
+
+[![Watch the Demo Video](https://img.youtube.com/vi/lcPM3eZUYCE/0.jpg)](https://youtu.be/lcPM3eZUYCE)
+
+[**Click here to watch the demo on YouTube**](https://youtu.be/lcPM3eZUYCE)
