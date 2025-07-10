@@ -126,34 +126,39 @@ function sendMessage() {
 
   appendChat(`You: ${text}`, "user");
 
-  // Backend expects text as a query param (not JSON), so send as FormData
-  const data = new URLSearchParams();
-  data.append("text", text);
-
-  // fetch(`/sessions/${selectedSession}/messages`, {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  //     body: data
-  // })
+  // First, save the message via POST
   fetch(
     `/sessions/${selectedSession}/messages?text=${encodeURIComponent(text)}`,
     {
       method: "POST",
     }
   )
-    .then((res) => res.json())
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
     .then((result) => {
-      appendChat(`Agent: ${result.agent_message.content}`, "agent");
+      console.log("Message saved, connecting to WebSocket for streaming response...");
+      // Now connect to WebSocket to get streaming response
+      connectProgressStream(selectedSession);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      appendChat(`Error: ${error.message}`, "error");
     });
 }
 
 function appendChat(text, role) {
+  console.log("🚀 ~ appendChat called with:", { text: text.substring(0, 50) + "...", role });
   const chat = document.getElementById("chatHistory");
   const div = document.createElement("div");
   div.textContent = text;
   div.className = role === "user" ? "user-msg" : "bot-msg";
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
+  console.log("🚀 ~ Message added to chat. Total messages:", chat.children.length);
 }
 
 // =============== PROGRESS STREAM (WebSocket) ===============
@@ -166,25 +171,133 @@ function appendChat(text, role) {
 // }
 
 function connectProgressStream(sessionId) {
+  console.log("🚀 ~ connectProgressStream ~ sessionId:", sessionId)
   if (ws) ws.close();
   ws = new WebSocket(
-    `ws://${location.hostname}:8000/sessions/${sessionId}/stream`
+    `ws://${location.hostname}:8080/sessions/${sessionId}/stream`
   );
+  
+  ws.onopen = () => {
+    console.log("🚀 ~ WebSocket connection opened successfully");
+  };
+  
   ws.onmessage = (e) => {
+    console.log("🚀 ~ WebSocket message received:", e.data);
+    console.log("🚀 ~ Message length:", e.data.length);
     try {
       const block = JSON.parse(e.data);
-      if (block.type === "text") {
+      console.log("🚀 ~ Parsed block:", block);
+      console.log("🚀 ~ Block type:", block.type);
+      
+      if (block.type === "text" && block.text) {
+        console.log("🚀 ~ Displaying text block:", block.text);
         appendChat("Agent: " + block.text, "agent");
       } else if (block.type === "tool_use") {
+        console.log("🚀 ~ Displaying tool_use block:", block.name);
         appendChat(`Agent: [Running tool: ${block.name}]`, "agent");
+      } else if (block.type === "tool_result") {
+        console.log("🚀 ~ Displaying tool_result block:", block.result);
+        console.log("🚀 ~ Tool result keys:", Object.keys(block.result));
+        console.log("🚀 ~ Tool result base64_image exists:", !!block.result.base64_image);
+        displayToolResult(block.result, block.tool_use_id);
+      } else if (block.type === "error") {
+        console.log("🚀 ~ Displaying error block:", block.message);
+        appendChat(`Error: ${block.message}`, "error");
+      } else if (block.type === "complete") {
+        console.log("🚀 ~ Agent task completed");
+        appendChat("Agent: [Task completed]", "agent");
       } else {
-        appendChat(`[progress] ${e.data}`, "bot-msg");
+        console.log("🚀 ~ Unknown block type:", block.type);
       }
-    } catch (err) {
-      appendChat("[progress] " + e.data, "bot-msg");
+    } catch (error) {
+      console.error("🚀 ~ Error parsing WebSocket message:", error);
+      console.error("🚀 ~ Raw message data:", e.data);
     }
   };
-  ws.onclose = () => console.log("Progress stream closed");
+  
+  ws.onerror = (error) => {
+    console.error("🚀 ~ WebSocket error:", error);
+    appendChat("Error: WebSocket connection failed", "error");
+  };
+  
+  ws.onclose = (event) => {
+    console.log("🚀 ~ WebSocket connection closed. Code:", event.code, "Reason:", event.reason);
+  };
+}
+
+function displayToolResult(result, toolUseId) {
+  console.log("🚀 ~ displayToolResult called with:", { result, toolUseId });
+  console.log("🚀 ~ Result keys:", Object.keys(result));
+  console.log("🚀 ~ base64_image length:", result.base64_image ? result.base64_image.length : "undefined");
+  console.log("🚀 ~ base64_image preview:", result.base64_image ? result.base64_image.substring(0, 50) + "..." : "undefined");
+  
+  const chat = document.getElementById("chatHistory");
+  const div = document.createElement("div");
+  div.className = "bot-msg";
+  
+  // Create content container
+  const contentDiv = document.createElement("div");
+  contentDiv.className = "tool-result-content";
+  
+  // Add tool ID info
+  const toolInfo = document.createElement("div");
+  toolInfo.className = "tool-info";
+  toolInfo.textContent = `Tool Result (${toolUseId})`;
+  contentDiv.appendChild(toolInfo);
+  
+  // Add output text if available
+  if (result.output && result.output.trim()) {
+    const outputDiv = document.createElement("div");
+    outputDiv.className = "tool-output";
+    outputDiv.textContent = result.output;
+    contentDiv.appendChild(outputDiv);
+  }
+  
+  // Add error if available
+  if (result.error && result.error.trim()) {
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "tool-error";
+    errorDiv.textContent = `Error: ${result.error}`;
+    contentDiv.appendChild(errorDiv);
+  }
+  
+  // Add image if available
+  if (result.base64_image) {
+    console.log("🚀 ~ Displaying image from tool result");
+    console.log("🚀 ~ Image data URL:", `data:image/png;base64,${result.base64_image}`);
+    
+    const imgDiv = document.createElement("div");
+    imgDiv.className = "tool-image";
+    
+    const img = document.createElement("img");
+    img.src = `data:image/png;base64,${result.base64_image}`;
+    img.alt = "Tool result image";
+    img.style.maxWidth = "100%";
+    img.style.height = "auto";
+    img.style.border = "1px solid #ccc";
+    img.style.borderRadius = "4px";
+    img.style.marginTop = "8px";
+    
+    // Add error handling for image loading
+    img.onload = () => {
+      console.log("🚀 ~ Image loaded successfully");
+    };
+    
+    img.onerror = (error) => {
+      console.error("🚀 ~ Image failed to load:", error);
+      console.error("🚀 ~ Image src:", img.src);
+    };
+    
+    imgDiv.appendChild(img);
+    contentDiv.appendChild(imgDiv);
+  } else {
+    console.log("🚀 ~ No base64_image found in result");
+  }
+  
+  div.appendChild(contentDiv);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  console.log("🚀 ~ Tool result added to chat. Total messages:", chat.children.length);
 }
 
 // =============== VNC VIEWER ===============
@@ -204,6 +317,17 @@ window.onload = function () {
   // Load initial task list and create session if needed
 //   loadTaskHistory();
 //   startNewTask();
+
+document.getElementById('msgInput').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // Prevent newline
+      sendMessage();      // Send the message
+  }
+});
+document.getElementById('msgInput').addEventListener('input', function () {
+  this.style.height = 'auto';
+  this.style.height = this.scrollHeight + 'px';
+});
 initializeApp();
 // loadTaskHistory();
 };
