@@ -100,7 +100,7 @@ async def run_agent_task(user_input: str, session_messages: list, model: str = "
                 if websocket:
                     print(f"[AGENT] Creating WebSocket task for text block")
                     # Create task and store it
-                    task = asyncio.create_task(send_websocket_block(websocket, block))
+                    task = asyncio.create_task(send_websocket_block(websocket, block, "output_callback"))
                     websocket_tasks.append(task)
                     print(f"[AGENT] WebSocket task created. Total tasks: {len(websocket_tasks)}")
             elif block["type"] == "tool_use":
@@ -110,7 +110,7 @@ async def run_agent_task(user_input: str, session_messages: list, model: str = "
                 # Send over WebSocket if available
                 if websocket:
                     print(f"[AGENT] Creating WebSocket task for tool_use block")
-                    task = asyncio.create_task(send_websocket_block(websocket, block))
+                    task = asyncio.create_task(send_websocket_block(websocket, block, "output_callback"))
                     websocket_tasks.append(task)
                     print(f"[AGENT] WebSocket task created. Total tasks: {len(websocket_tasks)}")
             elif block["type"] == "tool_result":
@@ -120,7 +120,7 @@ async def run_agent_task(user_input: str, session_messages: list, model: str = "
                 # Send over WebSocket if available
                 if websocket:
                     print(f"[AGENT] Creating WebSocket task for tool_result block")
-                    task = asyncio.create_task(send_websocket_block(websocket, block))
+                    task = asyncio.create_task(send_websocket_block(websocket, block, "output_callback"))
                     websocket_tasks.append(task)
                     print(f"[AGENT] WebSocket task created. Total tasks: {len(websocket_tasks)}")
 
@@ -130,16 +130,26 @@ async def run_agent_task(user_input: str, session_messages: list, model: str = "
 
 
         def tool_output_callback(result, block_id): 
-            print(f"[AGENT] TOOL_OUTPUT_CALLBACK - Tool {block_id} completed with result: {result}")
+            # print(f"[AGENT] TOOL_OUTPUT_CALLBACK - Tool {block_id} completed with result: {result}")
+            # Save image data if present, but only store a placeholder in the message history
+            if result.base64_image:
+                result_blocks.append("[SCREENSHOT CAPTURED]")  # Placeholder instead of full base64
             # Send tool result over WebSocket if available
             if websocket:
+                # Convert ToolResult to dictionary to make it JSON serializable
+                result_dict = {
+                    "output": result.output,
+                    "error": result.error,
+                    "base64_image": result.base64_image,
+                    "system": result.system
+                }
                 tool_result_block = {
                     "type": "tool_result",
                     "tool_use_id": block_id,
-                    "result": result
+                    "result": result_dict
                 }
-                print(f"[AGENT] Creating WebSocket task for tool_result block with ID: {block_id}")
-                task = asyncio.create_task(send_websocket_block(websocket, tool_result_block))
+                print(f"[AGENT] Creating WebSocket task for tool_result block with ID: {block_id}, tool_result_block: {tool_result_block}")
+                task = asyncio.create_task(send_websocket_block(websocket, tool_result_block, "tool_output_callback"))
                 websocket_tasks.append(task)
                 print(f"[AGENT] WebSocket task created for tool_result. Total tasks: {len(websocket_tasks)}")
         def api_response_callback(request, response, exc): 
@@ -166,9 +176,8 @@ async def run_agent_task(user_input: str, session_messages: list, model: str = "
     
     # Wait for all WebSocket tasks to complete
     if websocket_tasks:
-        print(f"[AGENT] Waiting for {len(websocket_tasks)} WebSocket tasks to complete...")
-        await asyncio.gather(*websocket_tasks, return_exceptions=True)
-        print(f"[AGENT] All WebSocket tasks completed")
+        print(f"[AGENT] Created {len(websocket_tasks)} WebSocket tasks (not awaiting)")
+        # Don't await - let them run in background for real-time streaming
     else:
         print(f"[AGENT] No WebSocket tasks to wait for")
     
@@ -178,12 +187,14 @@ async def run_agent_task(user_input: str, session_messages: list, model: str = "
     
     return final_result
 
-async def send_websocket_block(websocket, block):
+async def send_websocket_block(websocket, block, source=None):
     """Helper function to send a block over WebSocket with proper error handling"""
-    print(f"[WEBSOCKET] Attempting to send block: {block}")
+    print(f"[WEBSOCKET] Attempting to send block: {block}, from {source}")
     try:
         await websocket.send_json(block)
-        print(f"[WEBSOCKET] Successfully sent block: {block.get('type', 'unknown')}")
+        print(f"[WEBSOCKET] Successfully sent block: {block.get('type', 'unknown')} from {source}")
+        if block.get('type') == 'tool_result':
+            print(f"[WEBSOCKET] ✅ Tool result sent successfully!")
     except Exception as e:
         print(f"[WEBSOCKET] Send error: {e}")
         # Don't raise the exception, just log it

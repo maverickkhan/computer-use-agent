@@ -1,6 +1,7 @@
 // =============== GLOBAL STATE ===============
 let selectedSession = null;
 let ws = null;
+let wsMessageCount = 0;
 
 // =============== SESSION / TASKS ===============
 
@@ -105,12 +106,145 @@ function loadChatHistory(sessionId) {
       const chat = document.getElementById("chatHistory");
       chat.innerHTML = "";
       session.messages.forEach((m) => {
-        appendChat(
-          `${m.role === "user" ? "You" : "Agent"}: ${m.content}`,
-          m.role
-        );
+        if (m.role === "user") {
+          appendChat(`You: ${m.content}`, "user");
+        } else if (m.role === "agent") {
+          // Parse agent message content to properly display mixed content
+          parseAndDisplayAgentMessage(m.content);
+        }
       });
     });
+}
+
+function parseAndDisplayAgentMessage(content) {
+  // Use a simpler, more reliable approach
+  // Find each tool result and extract it along with its data, then process the rest as regular content
+  
+  let remainingContent = content;
+  let position = 0;
+  
+  while (true) {
+    // Find the next tool result marker
+    const toolResultMatch = remainingContent.substring(position).match(/\[TOOL_RESULT_([^\]]+)\]/);
+    
+    if (!toolResultMatch) {
+      // No more tool results, process remaining content as regular text
+      const finalText = remainingContent.substring(position);
+      if (finalText.trim()) {
+        parseRegularContent(finalText);
+      }
+      break;
+    }
+    
+    // Process text before this tool result
+    const beforeToolResult = remainingContent.substring(position, position + toolResultMatch.index);
+    if (beforeToolResult.trim()) {
+      parseRegularContent(beforeToolResult);
+    }
+    
+    // Extract tool ID
+    const toolId = toolResultMatch[1];
+    
+    // Find the start of tool data (after the marker)
+    const toolDataStart = position + toolResultMatch.index + toolResultMatch[0].length;
+    
+    // Find the end of tool data (start of next tool result or end of content)
+    const nextToolResultMatch = remainingContent.substring(toolDataStart).match(/\[TOOL_RESULT_[^\]]+\]/);
+    const toolDataEnd = nextToolResultMatch 
+      ? toolDataStart + nextToolResultMatch.index 
+      : remainingContent.length;
+    
+    // Extract and process tool data
+    const toolDataSection = remainingContent.substring(toolDataStart, toolDataEnd);
+    
+    // Split tool data section into actual tool data and following text
+    const lines = toolDataSection.split('\n');
+    const toolDataLines = [];
+    const followingTextLines = [];
+    let inToolData = true;
+    
+    for (const line of lines) {
+      if (inToolData && (line.startsWith('Output:') || line.startsWith('Error:') || line.startsWith('Image:') || line.trim() === '')) {
+        toolDataLines.push(line);
+      } else {
+        inToolData = false;
+        followingTextLines.push(line);
+      }
+    }
+    
+    // Process the tool result
+    const toolData = toolDataLines.join('\n');
+    const result = parseToolResultContent(toolData);
+    displayToolResult(result, toolId);
+    
+    // Process any text that follows the tool data
+    const followingText = followingTextLines.join('\n').trim();
+    if (followingText) {
+      parseRegularContent(followingText);
+    }
+    
+    // Move position to end of this tool data section
+    position = toolDataEnd;
+  }
+}
+
+function parseRegularContent(content) {
+  if (!content || !content.trim()) return;
+  
+  // Split content by lines and parse it
+  const lines = content.split('\n');
+  let currentTextBlock = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+    
+    if (trimmedLine.startsWith('[TOOL USE]')) {
+      // Display any accumulated text first
+      if (currentTextBlock.length > 0) {
+        const textContent = currentTextBlock.join('\n').trim();
+        if (textContent) {
+          appendChat(`Agent: ${textContent}`, "agent");
+        }
+        currentTextBlock = [];
+      }
+      // Display tool use indicator
+      appendChat(`Agent: ${trimmedLine}`, "agent");
+    } else {
+      // Accumulate this line (including empty lines to preserve formatting)
+      currentTextBlock.push(line);
+    }
+  }
+  
+  // Display any remaining text
+  if (currentTextBlock.length > 0) {
+    const textContent = currentTextBlock.join('\n').trim();
+    if (textContent) {
+      appendChat(`Agent: ${textContent}`, "agent");
+    }
+  }
+}
+
+function parseToolResultContent(content) {
+  const result = {
+    output: "",
+    error: "",
+    base64_image: null,
+    system: ""
+  };
+  
+  const lines = content.split('\n');
+  for (const line of lines) {
+    if (line.startsWith('Output: ')) {
+      result.output = line.substring(8);
+    } else if (line.startsWith('Error: ')) {
+      result.error = line.substring(7);
+    } else if (line.startsWith('Image: data:image/png;base64,')) {
+      result.base64_image = line.substring(29); // Remove "Image: data:image/png;base64,"
+    }
+  }
+  
+  return result;
 }
 
 // Send a message to the agent
@@ -151,14 +285,12 @@ function sendMessage() {
 }
 
 function appendChat(text, role) {
-  console.log("🚀 ~ appendChat called with:", { text: text.substring(0, 50) + "...", role });
   const chat = document.getElementById("chatHistory");
   const div = document.createElement("div");
   div.textContent = text;
   div.className = role === "user" ? "user-msg" : "bot-msg";
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
-  console.log("🚀 ~ Message added to chat. Total messages:", chat.children.length);
 }
 
 // =============== PROGRESS STREAM (WebSocket) ===============
@@ -173,6 +305,7 @@ function appendChat(text, role) {
 function connectProgressStream(sessionId) {
   console.log("🚀 ~ connectProgressStream ~ sessionId:", sessionId)
   if (ws) ws.close();
+  wsMessageCount = 0;
   ws = new WebSocket(
     `ws://${location.hostname}:8080/sessions/${sessionId}/stream`
   );
@@ -182,8 +315,16 @@ function connectProgressStream(sessionId) {
   };
   
   ws.onmessage = (e) => {
-    console.log("🚀 ~ WebSocket message received:", e.data);
+    wsMessageCount++;
+    console.log(`🚀 ~ WebSocket message #${wsMessageCount} received:`, e.data);
     console.log("🚀 ~ Message length:", e.data.length);
+    console.log("🚀 ~ Raw message type:", typeof e.data);
+    
+    // Log first 200 characters to see if it's a tool_result
+    if (e.data.length > 200) {
+      console.log("🚀 ~ Message preview (first 200 chars):", e.data.substring(0, 200));
+    }
+    
     try {
       const block = JSON.parse(e.data);
       console.log("🚀 ~ Parsed block:", block);
@@ -222,14 +363,11 @@ function connectProgressStream(sessionId) {
   
   ws.onclose = (event) => {
     console.log("🚀 ~ WebSocket connection closed. Code:", event.code, "Reason:", event.reason);
+    console.log("🚀 ~ Total messages received:", wsMessageCount);
   };
 }
 
 function displayToolResult(result, toolUseId) {
-  console.log("🚀 ~ displayToolResult called with:", { result, toolUseId });
-  console.log("🚀 ~ Result keys:", Object.keys(result));
-  console.log("🚀 ~ base64_image length:", result.base64_image ? result.base64_image.length : "undefined");
-  console.log("🚀 ~ base64_image preview:", result.base64_image ? result.base64_image.substring(0, 50) + "..." : "undefined");
   
   const chat = document.getElementById("chatHistory");
   const div = document.createElement("div");
@@ -263,9 +401,6 @@ function displayToolResult(result, toolUseId) {
   
   // Add image if available
   if (result.base64_image) {
-    console.log("🚀 ~ Displaying image from tool result");
-    console.log("🚀 ~ Image data URL:", `data:image/png;base64,${result.base64_image}`);
-    
     const imgDiv = document.createElement("div");
     imgDiv.className = "tool-image";
     
@@ -278,26 +413,13 @@ function displayToolResult(result, toolUseId) {
     img.style.borderRadius = "4px";
     img.style.marginTop = "8px";
     
-    // Add error handling for image loading
-    img.onload = () => {
-      console.log("🚀 ~ Image loaded successfully");
-    };
-    
-    img.onerror = (error) => {
-      console.error("🚀 ~ Image failed to load:", error);
-      console.error("🚀 ~ Image src:", img.src);
-    };
-    
     imgDiv.appendChild(img);
     contentDiv.appendChild(imgDiv);
-  } else {
-    console.log("🚀 ~ No base64_image found in result");
   }
   
   div.appendChild(contentDiv);
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
-  console.log("🚀 ~ Tool result added to chat. Total messages:", chat.children.length);
 }
 
 // =============== VNC VIEWER ===============
