@@ -88,12 +88,32 @@ body {
   .msg-input-row {
     display: flex;
     gap: 8px;
+    align-items: flex-end;
   }
   .msg-input-row input {
     flex: 1;
     padding: 8px;
     border-radius: 8px;
     border: 1px solid #ccd;
+  }
+  .msg-input-row textarea {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccd;
+    font-family: inherit;
+    font-size: 16px;
+    resize: none;            /* No resizing by user */
+    height: 40px;            /* FIXED height */
+    min-height: 40px;
+    max-height: 40px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border 0.2s;
+    overflow-y: auto;        /* Will show scrollbar for overflow */
+  }
+  .msg-input-row textarea:focus {
+    border: 1.5px solid #469afc;
   }
   .msg-input-row button {
     padding: 8px 16px;
@@ -103,6 +123,9 @@ body {
     color: white;
     font-weight: bold;
     cursor: pointer;
+    height: 40px;           /* FIXED height to match textarea */
+    align-self: flex-end;
+    box-sizing: border-box;
   }
   .file-upload {
     margin-top: 20px;
@@ -126,4 +149,53 @@ body {
     background: #D7E9FF;
     font-weight: bold;
     border-radius: 8px;
+}
+
+/* Tool Result Styles */
+.tool-result-content {
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
+.tool-info {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.tool-output {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  background-color: #ffffff;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  margin: 4px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tool-error {
+  font-size: 12px;
+  color: #dc3545;
+  background-color: #f8d7da;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  margin: 4px 0;
+}
+
+.tool-image {
+  margin-top: 8px;
+}
+
+.tool-image img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }  

@@ -15,3 +15,8 @@ services:
       - DISPLAY=:1
       - HEIGHT=768
       - WIDTH=1024
+    tmpfs:
+      - /tmp:size=2g   # Option A: mount 2GB RAM-backed /tmp for fast access (change size as needed)
+    # Uncomment below for Option B: map /tmp/outputs to a host folder for unlimited space
+    # volumes:
+    #   - ./outputs:/tmp/outputs
