@@ -72,10 +72,8 @@
 
 ---
 
-## 📺 Demo Video
+## 📺 Demo Videos
 
-Watch a full walkthrough of the Computer Use Agent challenge, demonstrating end-to-end setup, agent actions, and the integrated web interface:
+[**Watch Part 1**](https://www.loom.com/share/7263bb5996334ff787b9f482eae79902?sid=a7cd9717-773a-476f-aec1-700c941627db)
 
-[![Watch the Demo Video](https://img.youtube.com/vi/lcPM3eZUYCE/0.jpg)](https://youtu.be/lcPM3eZUYCE)
-
-[**Click here to watch the demo on YouTube**](https://youtu.be/lcPM3eZUYCE)
+[**Watch Part 2**](https://www.loom.com/share/c5c1fee045a24fdfa603e8360a9279e6?sid=a6ea28eb-ff37-4191-9892-777e43e22a6e)
