@@ -210,6 +210,46 @@ function parseRegularContent(content) {
       }
       // Display tool use indicator
       appendChat(`Agent: ${trimmedLine}`, "agent");
+    } else if (trimmedLine.match(/^!\[.*?\]\(.*?\)$/)) {
+      // This is a markdown image
+      // Display any accumulated text first
+      if (currentTextBlock.length > 0) {
+        const textContent = currentTextBlock.join('\n').trim();
+        if (textContent) {
+          appendChat(`Agent: ${textContent}`, "agent");
+        }
+        currentTextBlock = [];
+      }
+      
+      // Extract image URL and display image
+      const imageUrl = trimmedLine.match(/\((.*?)\)/)[1];
+      const imgContainer = document.createElement("div");
+      imgContainer.className = "bot-msg";
+      
+      const imgDiv = document.createElement("div");
+      imgDiv.className = "tool-image";
+      
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      img.alt = "Screenshot";
+      img.style.maxWidth = "100%";
+      img.style.height = "auto";
+      img.style.border = "1px solid #ccc";
+      img.style.borderRadius = "4px";
+      img.style.marginTop = "8px";
+      
+      // Add error handling for image load failures
+      img.onerror = function() {
+        console.error("Failed to load image:", imageUrl);
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "tool-error";
+        errorDiv.textContent = "Failed to load screenshot";
+        imgDiv.appendChild(errorDiv);
+      };
+      
+      imgDiv.appendChild(img);
+      imgContainer.appendChild(imgDiv);
+      document.getElementById("chatHistory").appendChild(imgContainer);
     } else {
       // Accumulate this line (including empty lines to preserve formatting)
       currentTextBlock.push(line);
@@ -229,7 +269,7 @@ function parseToolResultContent(content) {
   const result = {
     output: "",
     error: "",
-    base64_image: null,
+    image_url: null,
     system: ""
   };
   
@@ -239,8 +279,8 @@ function parseToolResultContent(content) {
       result.output = line.substring(8);
     } else if (line.startsWith('Error: ')) {
       result.error = line.substring(7);
-    } else if (line.startsWith('Image: data:image/png;base64,')) {
-      result.base64_image = line.substring(29); // Remove "Image: data:image/png;base64,"
+    } else if (line.startsWith('Image URL: ')) {
+      result.image_url = line.substring(11);
     }
   }
   
@@ -368,7 +408,6 @@ function connectProgressStream(sessionId) {
 }
 
 function displayToolResult(result, toolUseId) {
-  
   const chat = document.getElementById("chatHistory");
   const div = document.createElement("div");
   div.className = "bot-msg";
@@ -400,18 +439,27 @@ function displayToolResult(result, toolUseId) {
   }
   
   // Add image if available
-  if (result.base64_image) {
+  if (result.image_url) {
     const imgDiv = document.createElement("div");
     imgDiv.className = "tool-image";
     
     const img = document.createElement("img");
-    img.src = `data:image/png;base64,${result.base64_image}`;
+    img.src = result.image_url;
     img.alt = "Tool result image";
     img.style.maxWidth = "100%";
     img.style.height = "auto";
     img.style.border = "1px solid #ccc";
     img.style.borderRadius = "4px";
     img.style.marginTop = "8px";
+    
+    // Add error handling for image load failures
+    img.onerror = function() {
+      console.error("Failed to load image:", result.image_url);
+      const errorDiv = document.createElement("div");
+      errorDiv.className = "tool-error";
+      errorDiv.textContent = "Failed to load screenshot";
+      imgDiv.appendChild(errorDiv);
+    };
     
     imgDiv.appendChild(img);
     contentDiv.appendChild(imgDiv);
