@@ -11,6 +11,12 @@ from loop import sampling_loop, APIProvider
 from tools import TOOL_GROUPS_BY_VERSION, ToolVersion, ToolCollection, ToolResult
 print("Tool groups loaded:", TOOL_GROUPS_BY_VERSION)
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import asyncio
+import json
+from storage import save_base64_image, get_image_url
+
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
@@ -130,17 +136,33 @@ async def run_agent_task(user_input: str, session_messages: list, model: str = "
 
 
         def tool_output_callback(result, block_id): 
-            # print(f"[AGENT] TOOL_OUTPUT_CALLBACK - Tool {block_id} completed with result: {result}")
-            # Save image data if present, but only store a placeholder in the message history
+            # Save image data if present, store in MinIO and send URL
             if result.base64_image:
-                result_blocks.append("[SCREENSHOT CAPTURED]")  # Placeholder instead of full base64
+                try:
+                    # Save image to MinIO and get object name
+                    object_name = save_base64_image(result.base64_image)
+                    if object_name:
+                        # Get URL for the image
+                        image_url = get_image_url(object_name)
+                        if image_url:
+                            result_blocks.append(f"![Screenshot]({image_url})")  # Add image URL in markdown format
+                        else:
+                            print("[AGENT] Failed to generate image URL")
+                            result_blocks.append("[ERROR GENERATING IMAGE URL]")
+                    else:
+                        print("[AGENT] Failed to save image to MinIO")
+                        result_blocks.append("[ERROR SAVING SCREENSHOT]")
+                except Exception as e:
+                    print(f"[AGENT] Error handling image: {e}")
+                    result_blocks.append("[ERROR PROCESSING SCREENSHOT]")
+
             # Send tool result over WebSocket if available
             if websocket:
                 # Convert ToolResult to dictionary to make it JSON serializable
                 result_dict = {
                     "output": result.output,
                     "error": result.error,
-                    "base64_image": result.base64_image,
+                    "image_url": image_url if 'image_url' in locals() else None,
                     "system": result.system
                 }
                 tool_result_block = {
@@ -148,7 +170,7 @@ async def run_agent_task(user_input: str, session_messages: list, model: str = "
                     "tool_use_id": block_id,
                     "result": result_dict
                 }
-                print(f"[AGENT] Creating WebSocket task for tool_result block with ID: {block_id}, tool_result_block: {tool_result_block}")
+                print(f"[AGENT] Creating WebSocket task for tool_result block with ID: {block_id}")
                 task = asyncio.create_task(send_websocket_block(websocket, tool_result_block, "tool_output_callback"))
                 websocket_tasks.append(task)
                 print(f"[AGENT] WebSocket task created for tool_result. Total tasks: {len(websocket_tasks)}")

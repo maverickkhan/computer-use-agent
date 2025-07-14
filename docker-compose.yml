@@ -15,8 +15,31 @@ services:
       - DISPLAY=:1
       - HEIGHT=768
       - WIDTH=1024
+      - MINIO_HOST=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=screenshots
+      - EXTERNAL_URL=http://localhost:8080
     tmpfs:
       - /tmp:size=2g   # Option A: mount 2GB RAM-backed /tmp for fast access (change size as needed)
+    depends_on:
+      - minio
     # Uncomment below for Option B: map /tmp/outputs to a host folder for unlimited space
     # volumes:
     #   - ./outputs:/tmp/outputs
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  minio_data:
