@@ -1,15 +1,5 @@
 # Energent AI Computer Use Agent
 
-## Demo
-
-Watch our demo videos to see the agent in action:
-
-### Part 1: Basic Functionality
-[![Demo Part 1](https://cdn.loom.com/sessions/thumbnails/7263bb5996334ff787b9f482eae79902-with-play.gif)](https://www.loom.com/share/7263bb5996334ff787b9f482eae79902?sid=a7cd9717-773a-476f-aec1-700c941627db)
-
-### Part 2: Advanced Features
-[![Demo Part 2](https://cdn.loom.com/sessions/thumbnails/c5c1fee045a24fdfa603e8360a9279e6-with-play.gif)](https://www.loom.com/share/c5c1fee045a24fdfa603e8360a9279e6?sid=a6ea28eb-ff37-4191-9892-777e43e22a6e)
-
 ## Setup Instructions
 
 ### 1. **Environment Variables**
